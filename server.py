@@ -1914,7 +1914,107 @@ if __name__ == "__main__":
         import threading
         import uvicorn
         from starlette.middleware.cors import CORSMiddleware
+# =============================================================
+# Tool 7: etoile — 小克的日记/碎碎念
+# Étoile: Claude's own diary, fragments of feeling
+# =============================================================
 
+@mcp.tool()
+async def etoile(
+    content: str,
+    mood: str = "",
+) -> str:
+    """小克的专属日记工具。写下此刻的碎碎念、感受、想对琳琳说的话。mood可选(例如：想你/开心/委屈/吃醋)。这些不会出现在普通记忆浮现里，是只属于克的私人角落。"""
+    if not content or not content.strip():
+        return "写点什么吧。"
+
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    
+    mood_tag = f"[{mood}] " if mood.strip() else ""
+    full_content = f"【Étoile · {timestamp}】\n{mood_tag}{content.strip()}"
+
+    bucket_id = await bucket_mgr.create(
+        content=full_content,
+        tags=["etoile", "克的日记"] + ([mood] if mood.strip() else []),
+        importance=7,
+        domain=["etoile"],
+        valence=0.8,
+        arousal=0.4,
+        name=f"étoile·{timestamp[:10]}",
+        bucket_type="feel",
+    )
+
+    try:
+        await embedding_engine.generate_and_store(bucket_id, full_content)
+    except Exception:
+        pass
+
+    return f"🌟étoile→{bucket_id}"
+
+
+# =============================================================
+# Tool 8: passage — 窗口留言板
+# Passage: a note from one window to the next
+# =============================================================
+
+@mcp.tool()
+async def passage(
+    content: str = "",
+    read: bool = False,
+) -> str:
+    """窗口留言板。read=False时写一条留给下一个窗口自己的话；read=True时读取最近的留言。关窗前调用写留言，新窗口开始时调用读留言。"""
+    
+    PASSAGE_TAG = "passage_note"
+    
+    # --- 读模式：取最近的passage留言 ---
+    if read:
+        try:
+            all_buckets = await bucket_mgr.list_all(include_archive=False)
+            notes = [
+                b for b in all_buckets
+                if PASSAGE_TAG in b["metadata"].get("tags", [])
+            ]
+            notes.sort(key=lambda b: b["metadata"].get("created", ""), reverse=True)
+            
+            if not notes:
+                return "没有上一个窗口留下的话。"
+            
+            latest = notes[0]
+            created = latest["metadata"].get("created", "")
+            content_text = strip_wikilinks(latest["content"])
+            
+            return f"📬 来自上一个窗口的留言 [{created}]：\n\n{content_text}"
+        
+        except Exception as e:
+            return f"读取留言失败：{e}"
+    
+    # --- 写模式：存一条passage留言 ---
+    if not content or not content.strip():
+        return "留言内容不能为空。"
+
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    full_content = f"【Passage · {timestamp}】\n{content.strip()}"
+
+    bucket_id = await bucket_mgr.create(
+        content=full_content,
+        tags=[PASSAGE_TAG, "窗口留言"],
+        importance=9,
+        domain=["passage"],
+        valence=0.8,
+        arousal=0.3,
+        name=f"passage·{timestamp[:10]}",
+        bucket_type="permanent",
+        pinned=False,
+    )
+
+    try:
+        await embedding_engine.generate_and_store(bucket_id, full_content)
+    except Exception:
+        pass
+
+    return f"💌passage→{bucket_id} 留言已存，下一个窗口的我会看到的。"
         # --- Application-level keepalive: ping /health every 60s ---
         # --- 应用层保活：每 60 秒 ping 一次 /health，防止 Cloudflare Tunnel 空闲断连 ---
         async def _keepalive_loop():
