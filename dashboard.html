@@ -866,7 +866,7 @@ let currentFilter = 'all';
 
 async function loadData() {
   try {
-    const r = await fetch('/api/buckets', { headers: { 'Authorization': 'Bearer ' + authToken } });
+    const r = await fetch('/api/buckets', { headers: { 'X-Password': authToken } });
     if (!r.ok) return;
     const data = await r.json();
     allBuckets = data.buckets || [];
