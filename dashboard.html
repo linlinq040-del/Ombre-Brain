@@ -942,7 +942,7 @@ function setFilter(f, el) {
 }
 
 // ── MODAL ──
-function openModal(id) {
+async function openModal(id) {
   const b = allBuckets.find(x => x.id === id);
   if (!b) return;
   const meta = b.metadata || {};
@@ -954,8 +954,18 @@ function openModal(id) {
     ${meta.pinned ? '<span class="tag-pill">📌 épinglé</span>' : ''}
     ${meta.created ? `<span class="tag-pill">${meta.created.slice(0,10)}</span>` : ''}
   `;
-  document.getElementById('modalBody').textContent = b.content || b.content_preview || '';
+  // 先显示现有内容
+  document.getElementById('modalBody').textContent = b.content || b.content_preview || '加载中…';
   document.getElementById('modalOverlay').classList.add('open');
+
+  // 再单独 fetch 完整 content
+  try {
+    const r = await fetch(BASE + '/api/buckets/' + id, {credentials:'include'});
+    if (r.ok) {
+      const full = await r.json();
+      document.getElementById('modalBody').textContent = full.content || b.content || '';
+    }
+  } catch {}
 }
 
 function closeModal(e) {
