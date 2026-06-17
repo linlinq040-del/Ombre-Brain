@@ -963,7 +963,7 @@ async function openModal(id) {
     const r = await fetch(BASE + '/api/buckets/' + id, {credentials:'include'});
     if (r.ok) {
       const full = await r.json();
-      document.getElementById('modalBody').textContent = full.content || b.content || '';
+      document.getElementById('modalBody').textContent = full.content || full.content_preview || b.content || b.content_preview || '';
     }
   } catch {}
 }
