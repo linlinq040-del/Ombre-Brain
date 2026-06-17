@@ -873,7 +873,7 @@ async function loadData() {
     const r = await fetch(BASE + '/api/buckets', {credentials:'include'});
     if (!r.ok) return;
     const data = await r.json();
-    allBuckets = data.buckets || [];
+    allBuckets = Array.isArray(data) ? data : (data.buckets || []);
     renderBuckets();
     updateStats();
   } catch(e) { console.error(e); }
