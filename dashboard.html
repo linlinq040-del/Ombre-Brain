@@ -673,7 +673,7 @@ body {
     <div class="module-card" onclick="enterDashboard('étoile')">
       <span class="module-icon">🌟</span>
       <span class="module-name">Étoile</span>
-      <span class="module-desc">小克的日记</span>
+      <span class="module-desc">Ember的日记</span>
     </div>
     <div class="module-card" onclick="enterDashboard('passage')">
       <span class="module-icon">💌</span>
@@ -730,7 +730,7 @@ body {
   <div id="tab-étoile" class="tab-panel">
     <div id="page-etoile">
       <div class="page-header">
-        <p class="page-eyebrow">Étoile · 小克的日记</p>
+        <p class="page-eyebrow">Étoile · Ember的日记</p>
         <h2 class="page-title">Ce que<br><em>je ressens.</em></h2>
       </div>
       <div id="etoile-list"><div class="loading-text">Chargement…</div></div>
@@ -976,14 +976,14 @@ async function loadEtoile() {
     if (!entries.length) {
       list.innerHTML = `<div class="empty-state">
         <div class="empty-icon">🌟</div>
-        <p>Aucune entrée pour l'instant.<br>小克还没写过日记。</p>
+        <p>Aucune entrée pour l'instant.<br>Ember还没写过日记。</p>
       </div>`;
       return;
     }
 
     list.innerHTML = entries.map(b => {
       const meta = b.metadata || {};
-      const mood = (meta.tags||[]).find(t => !['etoile','克的日记','Ember的日记'].includes(t)) || '';
+      const mood = (meta.tags||[]).find(t => !['etoile','Ember的日记','Ember的日记'].includes(t)) || '';
       const date = meta.created ? meta.created.slice(0,16).replace('T',' · ') : '';
       return `<div class="entry-card">
         <div class="entry-meta">
