@@ -829,7 +829,7 @@ async function checkAuth() {
     authToken = pw;
   }
   try {
-    const r = await fetch('/api/buckets', { headers: { 'X-Password': authToken } });
+    const r = await fetch('/api/pulse', { headers: { 'Authorization': 'Bearer ' + authToken } });
     if (r.ok) { sessionStorage.setItem(PASSWORD_KEY, authToken); return true; }
     authToken = '';
     sessionStorage.removeItem(PASSWORD_KEY);
@@ -866,7 +866,7 @@ let currentFilter = 'all';
 
 async function loadData() {
   try {
-    const r = await fetch('/api/buckets', { headers: { 'X-Password': authToken } });
+    const r = await fetch('/api/buckets', { headers: { 'Authorization': 'Bearer ' + authToken } });
     if (!r.ok) return;
     const data = await r.json();
     allBuckets = data.buckets || [];
@@ -962,7 +962,7 @@ async function loadEtoile() {
   const list = document.getElementById('etoile-list');
   list.innerHTML = '<div class="loading-text">Chargement…</div>';
   try {
-    const r = await fetch('/api/buckets', { headers: { 'X-Password': authToken } });
+    const r = await fetch('/api/buckets', { headers: { 'Authorization': 'Bearer ' + authToken } });
     if (!r.ok) return;
     const data = await r.json();
     const entries = (data.buckets || []).filter(b =>
@@ -998,7 +998,7 @@ async function loadPassage() {
   const el = document.getElementById('passage-content');
   el.textContent = 'Chargement…';
   try {
-    const r = await fetch('/api/buckets', { headers: { 'X-Password': authToken } });
+    const r = await fetch('/api/buckets', { headers: { 'Authorization': 'Bearer ' + authToken } });
     if (!r.ok) return;
     const data = await r.json();
     const notes = (data.buckets || []).filter(b =>
@@ -1017,7 +1017,7 @@ async function loadPassage() {
 async function loadBreath() {
   const el = document.getElementById('breath-content');
   try {
-    const r = await fetch('/api/buckets', { headers: { 'X-Password': authToken } });
+    const r = await fetch('/api/buckets', { headers: { 'Authorization': 'Bearer ' + authToken } });
     if (!r.ok) return;
     const data = await r.json();
     const recent = (data.buckets || [])
