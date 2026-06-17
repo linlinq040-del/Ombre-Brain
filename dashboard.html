@@ -835,7 +835,7 @@ async function checkAuth() {
   }
   const pw = prompt('Mot de passe · 请输入访问密码');
   if (!pw) return false;
-  const login = await fetch('/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pw}) });
+  const login = await fetch('/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pw}), credentials:'include' });
   if (login.ok) return true;
   alert('密码错误');
   return false;
