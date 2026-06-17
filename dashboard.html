@@ -954,7 +954,7 @@ function openModal(id) {
     ${meta.pinned ? '<span class="tag-pill">📌 épinglé</span>' : ''}
     ${meta.created ? `<span class="tag-pill">${meta.created.slice(0,10)}</span>` : ''}
   `;
-  document.getElementById('modalBody').textContent = b.content || '';
+  document.getElementById('modalBody').textContent = b.content || b.content_preview || '';
   document.getElementById('modalOverlay').classList.add('open');
 }
 
