@@ -874,6 +874,11 @@ async function loadData() {
     if (!r.ok) return;
     const data = await r.json();
     allBuckets = Array.isArray(data) ? data : (data.buckets || []);
+    // 兼容两种数据结构
+allBuckets = allBuckets.map(b => ({
+  ...b,
+  metadata: b.metadata || { name: b.name, tags: b.tags, importance: b.importance, pinned: b.pinned, created: b.created }
+}));
     renderBuckets();
     updateStats();
   } catch(e) { console.error(e); }
