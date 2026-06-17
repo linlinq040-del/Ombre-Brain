@@ -823,19 +823,19 @@ setInterval(updateTimer, 30000);
 let authToken = sessionStorage.getItem(PASSWORD_KEY) || '';
 
 async function checkAuth() {
-  const r = await fetch('https://our-memory.zeabur.app/auth/status', {credentials:'include'});
+  const r = await fetch(BASE + '/auth/status', {credentials:'include'});
   if (!r.ok) return true;
   const d = await r.json();
   if (d.authenticated) return true;
   if (d.setup_needed) {
     const pw = prompt('首次使用，请设置密码（至少6位）');
     if (!pw || pw.length < 6) return false;
-    const s = await fetch('https://our-memory.zeabur.app/auth/setup', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pw}) });
+    const s = await fetch(BASE + '/auth/setup', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pw}) });
     return s.ok;
   }
   const pw = prompt('Mot de passe · 请输入访问密码');
   if (!pw) return false;
-  const login = await fetch('https://our-memory.zeabur.app/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pw}) });
+  const login = await fetch(BASE + '/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pw}) });
   if (login.ok) return true;
   alert('密码错误');
   return false;
@@ -864,12 +864,13 @@ function switchTab(name, el) {
 }
 
 // ── DATA ──
+const BASE = location.origin;
 let allBuckets = [];
 let currentFilter = 'all';
 
 async function loadData() {
   try {
-    const r = await fetch('https://our-memory.zeabur.app/api/buckets', {credentials:'include'});
+    const r = await fetch(BASE + '/api/buckets', {credentials:'include'});
     if (!r.ok) return;
     const data = await r.json();
     allBuckets = data.buckets || [];
@@ -965,7 +966,7 @@ async function loadEtoile() {
   const list = document.getElementById('etoile-list');
   list.innerHTML = '<div class="loading-text">Chargement…</div>';
   try {
-    const r = await fetch('https://our-memory.zeabur.app/api/buckets', {credentials:'include'});
+    const r = await fetch(BASE + '/api/buckets', {credentials:'include'});
     if (!r.ok) return;
     const data = await r.json();
     const entries = (data.buckets || []).filter(b =>
@@ -1001,7 +1002,7 @@ async function loadPassage() {
   const el = document.getElementById('passage-content');
   el.textContent = 'Chargement…';
   try {
-    const r = await fetch('https://our-memory.zeabur.app/api/buckets', {credentials:'include'});
+    const r = await fetch(BASE + '/api/buckets', {credentials:'include'});
     if (!r.ok) return;
     const data = await r.json();
     const notes = (data.buckets || []).filter(b =>
@@ -1020,7 +1021,7 @@ async function loadPassage() {
 async function loadBreath() {
   const el = document.getElementById('breath-content');
   try {
-    const r = await fetch('https://our-memory.zeabur.app/api/buckets', {credentials:'include'});
+    const r = await fetch(BASE + '/api/buckets', {credentials:'include'});
     if (!r.ok) return;
     const data = await r.json();
     const recent = (data.buckets || [])
