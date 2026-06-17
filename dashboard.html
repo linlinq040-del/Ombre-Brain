@@ -823,7 +823,7 @@ setInterval(updateTimer, 30000);
 let authToken = sessionStorage.getItem(PASSWORD_KEY) || '';
 
 async function checkAuth() {
-  const r = await fetch('/auth/status');
+  const r = await fetch('/auth/status', {credentials:'include'});
   if (!r.ok) return true;
   const d = await r.json();
   if (d.authenticated) return true;
@@ -869,7 +869,7 @@ let currentFilter = 'all';
 
 async function loadData() {
   try {
-    const r = await fetch('/api/buckets', {});
+    const r = await fetch('/api/buckets', {credentials:'include'});
     if (!r.ok) return;
     const data = await r.json();
     allBuckets = data.buckets || [];
@@ -965,7 +965,7 @@ async function loadEtoile() {
   const list = document.getElementById('etoile-list');
   list.innerHTML = '<div class="loading-text">Chargement…</div>';
   try {
-    const r = await fetch('/api/buckets', {});
+    const r = await fetch('/api/buckets', {credentials:'include'});
     if (!r.ok) return;
     const data = await r.json();
     const entries = (data.buckets || []).filter(b =>
@@ -1001,7 +1001,7 @@ async function loadPassage() {
   const el = document.getElementById('passage-content');
   el.textContent = 'Chargement…';
   try {
-    const r = await fetch('/api/buckets', {});
+    const r = await fetch('/api/buckets', {credentials:'include'});
     if (!r.ok) return;
     const data = await r.json();
     const notes = (data.buckets || []).filter(b =>
@@ -1020,7 +1020,7 @@ async function loadPassage() {
 async function loadBreath() {
   const el = document.getElementById('breath-content');
   try {
-    const r = await fetch('/api/buckets', {});
+    const r = await fetch('/api/buckets', {credentials:'include'});
     if (!r.ok) return;
     const data = await r.json();
     const recent = (data.buckets || [])
