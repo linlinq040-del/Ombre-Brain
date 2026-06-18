@@ -671,6 +671,7 @@ body {
 
 <!-- HEADER -->
 <div class="header" id="main-header" style="display:none">
+  <button onclick="goHome()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--accent);padding:4px 8px;border-radius:8px;">←</button>
   <h1>Notre Mémoire ✦</h1>
   <span class="stats" id="header-stats">chargement…</span>
   <div class="search-bar">
@@ -956,6 +957,12 @@ function switchTab(name, el) {
   if (name === 'import') pollImportStatus();
   if (name === 'réglages') loadConfig();
 }
+  function goHome() {
+  document.getElementById('page-dashboard').style.display = 'none';
+  document.getElementById('main-header').style.display = 'none';
+  document.getElementById('page-accueil').style.display = 'block';
+}
+
 
 // ── DATA ──
 const BASE = location.origin;
