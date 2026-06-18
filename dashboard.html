@@ -1001,7 +1001,11 @@ async function loadEtoile() {
 
   try {
     const r = await fetch(BASE + '/api/buckets', {credentials:'include'});
-    if (!r.ok) return;
+    if (!r.ok) { 
+  list.innerHTML = `<div>Error ${r.status}</div>`; 
+  return; 
+}
+
     const data = await r.json();
     const entries = (Array.isArray(data) ? data : (data.buckets || []))
       .filter(b => {
@@ -1050,7 +1054,8 @@ async function loadPassage() {
 
   try {
     const r = await fetch(BASE + '/api/buckets', {credentials:'include'});
-    if (!r.ok) return;
+    if (!r.ok) { el.textContent = 'Error ' + r.status; return; }
+
     const data = await r.json();
     const notes = (Array.isArray(data) ? data : (data.buckets || []))
       .filter(b => {
