@@ -926,8 +926,7 @@ function renderBuckets() {
     const imp = meta.importance || '';
     return `<div class="bucket-row" onclick='openModal(${JSON.stringify(b.id)})'>
       <span class="icon">${icon}</span>
-      <span class="name">${meta.name || b.name || (meta.tags?.length ? meta.tags : b.tags || [])[0] || b.id.slice(0,8)}</span>
-
+      <span class="name">${(meta.tags?.length ? meta.tags[0] : null) || meta.name || b.name || b.id.slice(0,8)}</span>
       <span class="tags">${tags}</span>
       <span class="importance">${imp ? imp + '/10' : ''}</span>
       <span class="domain">${(meta.domain||[]).join('/')}</span>
