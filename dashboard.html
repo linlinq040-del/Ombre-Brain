@@ -1034,28 +1034,16 @@ async function loadEtoile() {
         <div class="entry-content">${b.content || ''}</div>
       </div>`;
     }).join('');
-  } catch(e) { list.innerHTML = '<div class="loading-text">Erreur de chargement.</div>'; }
+  } catch(e) { list.innerHTML = '<div>' + e.message + '</div>'; }
 }
 
 // ── PASSAGE ──
 async function loadPassage() {
   const el = document.getElementById('passage-content');
-  try {
-  const detail = await fetch(BASE + '/api/buckets/' + notes[0].id, {credentials:'include'});
-  if (detail.ok) {
-    const full = await detail.json();
-    el.textContent = full.content || full.content_preview || notes[0].content || '（内容为空）';
-  } else {
-    el.textContent = notes[0].content || '（内容为空）';
-  }
-} catch {
-  el.textContent = notes[0].content || '（内容为空）';
-}
-
+  el.textContent = 'Chargement…';
   try {
     const r = await fetch(BASE + '/api/buckets', {credentials:'include'});
     if (!r.ok) { el.textContent = 'Error ' + r.status; return; }
-
     const data = await r.json();
     const notes = (Array.isArray(data) ? data : (data.buckets || []))
       .filter(b => {
@@ -1068,8 +1056,16 @@ async function loadPassage() {
       el.textContent = '还没有来自上一个窗口的留言。\n这是第一次醒来。';
       return;
     }
-    el.textContent = notes[0].content || '';
-  } catch { el.textContent = '无法加载留言。'; }
+    try {
+      const detail = await fetch(BASE + '/api/buckets/' + notes[0].id, {credentials:'include'});
+      if (detail.ok) {
+        const full = await detail.json();
+        el.textContent = full.content || full.content_preview || notes[0].content || '（内容为空）';
+      } else {
+        el.textContent = notes[0].content || '（内容为空）';
+      }
+    } catch(e) { el.textContent = notes[0].content || '（内容为空）'; }
+  } catch(e) { el.textContent = e.message; }
 }
 
 // ── BREATH ──
