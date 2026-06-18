@@ -244,8 +244,8 @@ body {
 .module-desc { font-size: 0.72rem; color: var(--text-dim); line-height: 1.4; }
 
 /* ── TABS ── */
-.tabs {
-  display: flex;
+.tabs { 
+  display: none !important; 
   padding: 0 40px;
   gap: 4px;
   background: rgba(240,247,243,0.6);
@@ -942,6 +942,8 @@ async function enterDashboard(tab) {
   document.getElementById('main-header').style.display = 'flex';
   switchTab(tab, document.querySelector(`.tab[onclick*="${tab}"]`));
   loadData();
+  const names = {'mémoire':'Mémoire','étoile':'Étoile','passage':'Passage','souffle':'Souffle','réseau':'Réseau','import':'Import','réglages':'Réglages'};
+document.querySelector('#main-header h1').textContent = names[tab] || 'Notre Mémoire ✦';
 }
 
 function switchTab(name, el) {
