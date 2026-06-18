@@ -964,7 +964,7 @@ async function openModal(id) {
 
   // 再单独 fetch 完整 content
   try {
-    const r = await fetch(BASE + '/api/buckets/' + id, {credentials:'include'});
+    const r = await fetch(BASE + '/api/bucket/' + id, {credentials:'include'});
     if (r.ok) {
       const full = await r.json();
       document.getElementById('modalBody').textContent = full.content || full.content_preview || b.content || b.content_preview || '';
