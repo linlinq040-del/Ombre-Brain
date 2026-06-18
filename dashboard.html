@@ -1065,7 +1065,7 @@ async function runBreath() {
   results.innerHTML = '<div class="loading-text">检索中…</div>';
 
   try {
-    let url = BASE + '/api/breath?';
+    let url = BASE + '/api/buckets/search?';
     if (query) url += 'query=' + encodeURIComponent(query) + '&';
     if (valence) url += 'valence=' + valence + '&';
     if (arousal) url += 'arousal=' + arousal + '&';
