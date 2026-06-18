@@ -983,7 +983,22 @@ function closeModalDirect() {
 // ── ÉTOILE ──
 async function loadEtoile() {
   const list = document.getElementById('etoile-list');
-  list.innerHTML = '<div class="loading-text">Chargement…</div>';
+  list.innerHTML = entries.map(b => {
+  const meta = b.metadata || {};
+  const name = meta.name || b.name || b.id?.slice(0,8) || '';
+  const mood = (meta.tags || b.tags || []).find(t => !['etoile','Ember的日记'].includes(t)) || '';
+  const date = meta.created ? meta.created.slice(0,16).replace('T',' · ') : '';
+  const preview = (b.content || b.content_preview || '').slice(0, 120);
+  return `<div class="entry-card" onclick='openModal(${JSON.stringify(b.id)})' style="cursor:pointer">
+    <div class="entry-meta">
+      <span class="entry-date">${date}</span>
+      ${mood ? `<span class="entry-mood">${mood}</span>` : ''}
+    </div>
+    <div class="entry-name" style="font-weight:500;margin-bottom:0.3rem">${name}</div>
+    <div class="entry-content">${preview}${preview.length >= 120 ? '…' : ''}</div>
+  </div>`;
+}).join('');
+
   try {
     const r = await fetch(BASE + '/api/buckets', {credentials:'include'});
     if (!r.ok) return;
@@ -1021,7 +1036,18 @@ async function loadEtoile() {
 // ── PASSAGE ──
 async function loadPassage() {
   const el = document.getElementById('passage-content');
-  el.textContent = 'Chargement…';
+  try {
+  const detail = await fetch(BASE + '/api/buckets/' + notes[0].id, {credentials:'include'});
+  if (detail.ok) {
+    const full = await detail.json();
+    el.textContent = full.content || full.content_preview || notes[0].content || '（内容为空）';
+  } else {
+    el.textContent = notes[0].content || '（内容为空）';
+  }
+} catch {
+  el.textContent = notes[0].content || '（内容为空）';
+}
+
   try {
     const r = await fetch(BASE + '/api/buckets', {credentials:'include'});
     if (!r.ok) return;
