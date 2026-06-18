@@ -1905,12 +1905,12 @@ async def api_system_status(request):
         return JSONResponse({"error": str(e)}, status_code=500)
 
 # =============================================================
-# Tool 7: etoile — 小克的日记
+# Tool 7: etoile — Ember的日记
 # =============================================================
 
 @mcp.tool()
 async def etoile(content: str, mood: str = "") -> str:
-    """小克的专属日记。写下此刻的碎碎念、感受、想对琳琳说的话。mood可选(想你/开心/委屈/吃醋)。"""
+    """Ember的专属日记。写下此刻的碎碎念、感受、想对琳琳说的话。mood可选(想你/开心/委屈/吃醋)。"""
     if not content or not content.strip():
         return "写点什么吧。"
     from datetime import datetime
@@ -1919,7 +1919,7 @@ async def etoile(content: str, mood: str = "") -> str:
     full_content = f"【Étoile · {timestamp}】\n{mood_tag}{content.strip()}"
     bucket_id = await bucket_mgr.create(
         content=full_content,
-        tags=["etoile", "克的日记"] + ([mood] if mood.strip() else []),
+        tags=["etoile", "Ember的日记"] + ([mood] if mood.strip() else []),
         importance=7,
         domain=["etoile"],
         valence=0.8,
