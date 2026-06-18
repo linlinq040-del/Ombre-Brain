@@ -769,18 +769,68 @@ body {
 </div>
 
   <!-- IMPORT -->
-  <div id="tab-import" class="tab-panel content">
-    <div class="panel-placeholder">
-      <div class="ph-icon">📥</div>
-      <p>Import · 导入记忆<br>从文件导入新的记忆桶</p>
+<div id="tab-import" class="tab-panel content">
+  <div style="max-width:640px;margin:0 auto;">
+    <h3 style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--accent);margin-bottom:8px;">导入历史对话</h3>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">支持 Claude JSON、ChatGPT、DeepSeek、Markdown、纯文本格式</p>
+    <div id="import-upload-zone" style="border:2px dashed var(--border);border-radius:16px;padding:40px;text-align:center;cursor:pointer;margin-bottom:16px;transition:border-color .2s;">
+      <div style="font-size:32px;margin-bottom:8px;">📁</div>
+      <div style="font-size:13px;color:var(--text-dim);">拖拽文件到此处，或 <span style="color:var(--accent);">点击选择</span></div>
+      <input type="file" id="import-file-input" accept=".json,.txt,.md,.jsonl" style="display:none" />
     </div>
+    <label style="font-size:13px;color:var(--text-dim);display:flex;align-items:center;gap:8px;margin-bottom:20px;">
+      <input type="checkbox" id="import-preserve-raw" /> 保留原文模式（仪式性内容不摘要）
+    </label>
+    <div id="import-progress" style="display:none;margin-bottom:20px;">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
+        <span id="import-status-text">准备中…</span>
+        <span id="import-progress-text">0/0</span>
+      </div>
+      <div style="background:var(--surface);border-radius:8px;height:10px;overflow:hidden;">
+        <div id="import-progress-bar" style="height:100%;background:var(--accent);border-radius:8px;transition:width .3s;width:0%;"></div>
+      </div>
+      <div style="display:flex;gap:16px;margin-top:8px;font-size:12px;color:var(--text-dim);">
+        <span>新建: <b id="import-created">0</b></span>
+        <span>合并: <b id="import-merged">0</b></span>
+        <span>API: <b id="import-api-calls">0</b></span>
+      </div>
+      <button id="import-pause-btn" onclick="pauseImport()" style="display:none;margin-top:8px;padding:6px 16px;border:1px solid var(--border);border-radius:8px;background:none;cursor:pointer;font-size:12px;">⏸ 暂停</button>
+    </div>
+    <div id="import-errors" style="display:none;padding:12px;background:var(--surface);border-radius:8px;font-size:12px;color:var(--negative);max-height:100px;overflow-y:auto;margin-bottom:16px;"></div>
+    <div id="import-results-list" style="max-height:400px;overflow-y:auto;"></div>
   </div>
-
+</div>
+  
   <!-- RÉGLAGES -->
-  <div id="tab-réglages" class="tab-panel content">
-    <div class="panel-placeholder">
-      <div class="ph-icon">⚙️</div>
-      <p>Réglages · 配置<br>API 设置与系统配置</p>
+<div id="tab-réglages" class="tab-panel content">
+  <div style="max-width:580px;margin:0 auto;">
+    <div style="background:var(--surface);border-radius:16px;padding:24px;margin-bottom:20px;border:1px solid var(--border);">
+      <h3 style="font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--accent);margin-bottom:16px;">脱水 API</h3>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+        <label style="width:100px;font-size:12px;color:var(--text-dim);">Model</label>
+        <input type="text" id="cfg-dehy-model" placeholder="gemini-2.5-flash-lite" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-size:13px;font-family:inherit;" />
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+        <label style="width:100px;font-size:12px;color:var(--text-dim);">Base URL</label>
+        <input type="text" id="cfg-dehy-url" placeholder="https://..." style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-size:13px;font-family:inherit;" />
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+        <label style="width:100px;font-size:12px;color:var(--text-dim);">API Key</label>
+        <input type="password" id="cfg-dehy-key" placeholder="留空不改" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-size:13px;font-family:inherit;" />
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+        <label style="width:100px;font-size:12px;color:var(--text-dim);">合并阈值</label>
+        <input type="number" id="cfg-merge" min="0" max="100" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-size:13px;font-family:inherit;" />
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;margin-bottom:12px;">
+      <button onclick="saveConfig(false)" style="flex:1;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:13px;cursor:pointer;">应用</button>
+      <button onclick="saveConfig(true)" style="flex:1;padding:10px;background:var(--surface);color:var(--accent);border:1px solid var(--border);border-radius:12px;font-size:13px;cursor:pointer;">写入 config.yaml</button>
+    </div>
+    <div id="config-status" style="font-size:13px;margin-bottom:20px;"></div>
+    <div style="background:var(--surface);border-radius:16px;padding:24px;border:1px solid var(--border);">
+      <h3 style="font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--accent);margin-bottom:12px;">系统状态</h3>
+      <div id="config-readonly" style="font-size:13px;color:var(--text-dim);line-height:2;">加载中…</div>
     </div>
   </div>
 </div>
@@ -862,6 +912,8 @@ function switchTab(name, el) {
   if (name === 'passage') loadPassage();
   if (name === 'souffle') runBreath();
   if (name === 'réseau') loadNetwork();
+  if (name === 'import') pollImportStatus();
+  if (name === 'réglages') loadConfig();
 }
 
 // ── DATA ──
@@ -1162,6 +1214,99 @@ function drawNetwork(ctx, W, H, data) {
     ctx.fillStyle='#3A3530'; ctx.font='10px Inter,sans-serif'; ctx.textAlign='center';
     ctx.fillText((n.name||n.id?.slice(0,6)).slice(0,8), p.x, p.y+r+12);
   });
+}
+
+// ── IMPORT ──
+const uploadZone = document.getElementById('import-upload-zone');
+const fileInput = document.getElementById('import-file-input');
+if (uploadZone) {
+  uploadZone.addEventListener('click', () => fileInput.click());
+  uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.style.borderColor='var(--accent)'; });
+  uploadZone.addEventListener('dragleave', () => { uploadZone.style.borderColor='var(--border)'; });
+  uploadZone.addEventListener('drop', e => { e.preventDefault(); uploadZone.style.borderColor='var(--border)'; if(e.dataTransfer.files.length) startImport(e.dataTransfer.files[0]); });
+  fileInput.addEventListener('change', () => { if(fileInput.files.length) startImport(fileInput.files[0]); });
+}
+
+async function startImport(file) {
+  const fd = new FormData();
+  fd.append('file', file);
+  const preserveRaw = document.getElementById('import-preserve-raw')?.checked;
+  try {
+    const res = await fetch(BASE + '/api/import/upload?preserve_raw=' + (preserveRaw?'1':'0'), {method:'POST',body:fd,credentials:'include'});
+    const data = await res.json();
+    if (data.error) { alert('导入失败: ' + data.error); return; }
+    document.getElementById('import-progress').style.display = '';
+    document.getElementById('import-pause-btn').style.display = '';
+    pollImportStatus();
+  } catch(e) { alert('上传失败: ' + e.message); }
+}
+
+let importPollTimer;
+async function pollImportStatus() {
+  clearInterval(importPollTimer);
+  try {
+    const res = await fetch(BASE + '/api/import/status', {credentials:'include'});
+    const s = await res.json();
+    updateImportUI(s);
+    if (s.status === 'running') {
+      importPollTimer = setInterval(async () => {
+        try { updateImportUI(await (await fetch(BASE+'/api/import/status',{credentials:'include'})).json()); } catch{}
+      }, 2000);
+    }
+  } catch{}
+}
+
+function updateImportUI(s) {
+  const prog = document.getElementById('import-progress');
+  if (s.status === 'idle') { prog.style.display='none'; return; }
+  prog.style.display = '';
+  const pct = s.total_chunks ? Math.round(s.processed/s.total_chunks*100) : 0;
+  document.getElementById('import-progress-bar').style.width = pct + '%';
+  document.getElementById('import-progress-text').textContent = s.processed + '/' + s.total_chunks;
+  document.getElementById('import-api-calls').textContent = s.api_calls;
+  document.getElementById('import-created').textContent = s.memories_created;
+  document.getElementById('import-merged').textContent = s.memories_merged;
+  const statusMap = {running:'⏳ 导入中…',paused:'⏸ 已暂停',completed:'✅ 完成',error:'❌ 出错'};
+  document.getElementById('import-status-text').textContent = statusMap[s.status]||s.status;
+  document.getElementById('import-pause-btn').style.display = s.status==='running' ? '' : 'none';
+  if (s.status !== 'running') clearInterval(importPollTimer);
+  const errDiv = document.getElementById('import-errors');
+  if (s.errors?.length) { errDiv.style.display=''; errDiv.textContent=s.errors.join('\n'); } else errDiv.style.display='none';
+}
+
+async function pauseImport() {
+  try { await fetch(BASE+'/api/import/pause',{method:'POST',credentials:'include'}); } catch{}
+}
+
+// ── RÉGLAGES ──
+async function loadConfig() {
+  try {
+    const res = await fetch(BASE+'/api/config', {credentials:'include'});
+    const cfg = await res.json();
+    document.getElementById('cfg-dehy-model').value = cfg.dehydration?.model || '';
+    document.getElementById('cfg-dehy-url').value = cfg.dehydration?.base_url || '';
+    document.getElementById('cfg-merge').value = cfg.merge_threshold || 75;
+    document.getElementById('config-readonly').innerHTML =
+      'Transport: <b>'+cfg.transport+'</b><br>Buckets: <b>'+cfg.buckets_dir+'</b>';
+  } catch(e) { document.getElementById('config-status').textContent = '加载失败'; }
+}
+
+async function saveConfig(persist) {
+  const body = {
+    dehydration: { model: document.getElementById('cfg-dehy-model').value, base_url: document.getElementById('cfg-dehy-url').value },
+    merge_threshold: parseInt(document.getElementById('cfg-merge').value)||75,
+    persist
+  };
+  const key = document.getElementById('cfg-dehy-key').value;
+  if (key) body.dehydration.api_key = key;
+  const status = document.getElementById('config-status');
+  try {
+    const res = await fetch(BASE+'/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),credentials:'include'});
+    const result = await res.json();
+    status.style.color = result.ok ? 'var(--positive)' : 'var(--negative)';
+    status.textContent = result.ok ? '✓ 已更新' : '✗ ' + (result.error||'失败');
+    if (result.ok) loadConfig();
+  } catch(e) { status.textContent = '✗ 请求失败'; }
 }
 
 // ── KEYBOARD ──
