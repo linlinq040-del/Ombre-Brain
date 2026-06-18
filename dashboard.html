@@ -893,6 +893,10 @@ function updateStats() {
 function renderBuckets() {
   const list = document.getElementById('bucketList');
   let filtered = allBuckets;
+  filtered = filtered.filter(b => {
+  const tags = b.metadata?.tags || b.tags || [];
+  return !tags.includes('etoile') && !tags.includes('passage_note');
+});
   const q = document.getElementById('searchInput').value.toLowerCase();
 
   if (currentFilter === 'pinned') filtered = filtered.filter(b => b.metadata?.pinned);
@@ -984,10 +988,12 @@ async function loadEtoile() {
     const r = await fetch(BASE + '/api/buckets', {credentials:'include'});
     if (!r.ok) return;
     const data = await r.json();
-    const entries = (data.buckets || []).filter(b =>
-      (b.metadata?.tags || []).includes('etoile') ||
-      (b.metadata?.domain || []).includes('etoile')
-    ).sort((a,b) => (b.metadata?.created||'').localeCompare(a.metadata?.created||''));
+    const entries = (Array.isArray(data) ? data : (data.buckets || []))
+      .filter(b => {
+        const tags = b.metadata?.tags || b.tags || [];
+        return tags.includes('etoile');
+      })
+      .sort((a,b) => (b.metadata?.created||'').localeCompare(a.metadata?.created||''));
 
     if (!entries.length) {
       list.innerHTML = `<div class="empty-state">
@@ -999,7 +1005,7 @@ async function loadEtoile() {
 
     list.innerHTML = entries.map(b => {
       const meta = b.metadata || {};
-      const mood = (meta.tags||[]).find(t => !['etoile','Ember的日记','Ember的日记'].includes(t)) || '';
+      const mood = (meta.tags||b.tags||[]).find(t => !['etoile','Ember的日记'].includes(t)) || '';
       const date = meta.created ? meta.created.slice(0,16).replace('T',' · ') : '';
       return `<div class="entry-card">
         <div class="entry-meta">
@@ -1020,9 +1026,12 @@ async function loadPassage() {
     const r = await fetch(BASE + '/api/buckets', {credentials:'include'});
     if (!r.ok) return;
     const data = await r.json();
-    const notes = (data.buckets || []).filter(b =>
-      (b.metadata?.tags || []).includes('passage_note')
-    ).sort((a,b) => (b.metadata?.created||'').localeCompare(a.metadata?.created||''));
+    const notes = (Array.isArray(data) ? data : (data.buckets || []))
+      .filter(b => {
+        const tags = b.metadata?.tags || b.tags || [];
+        return tags.includes('passage_note');
+      })
+      .sort((a,b) => (b.metadata?.created||'').localeCompare(a.metadata?.created||''));
 
     if (!notes.length) {
       el.textContent = '还没有来自上一个窗口的留言。\n这是第一次醒来。';
