@@ -1041,7 +1041,7 @@ async function loadPassage() {
       return;
     }
     try {
-      const detail = await fetch(BASE + '/api/buckets/' + notes[0].id, {credentials:'include'});
+      const detail = await fetch(BASE + '/api/bucket/' + notes[0].id, {credentials:'include'});
       if (detail.ok) {
         const full = await detail.json();
         el.textContent = full.content || full.content_preview || notes[0].content || '（内容为空）';
