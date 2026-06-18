@@ -1065,8 +1065,8 @@ async function runBreath() {
   results.innerHTML = '<div class="loading-text">检索中…</div>';
 
   try {
-    let url = BASE + '/api/buckets/search?';
-    if (query) url += 'query=' + encodeURIComponent(query) + '&';
+    let url = BASE + '/api/breath-debug?';
+    if (query) url += 'q=' + encodeURIComponent(query) + '&';
     if (valence) url += 'valence=' + valence + '&';
     if (arousal) url += 'arousal=' + arousal + '&';
     const r = await fetch(url, {credentials:'include'});
@@ -1074,7 +1074,7 @@ async function runBreath() {
     const data = await r.json();
 
     info.style.display = '';
-    info.textContent = '候选: ' + (data.total_candidates||'—') + ' · 通过: ' + (data.passed||'—') + ' · 阈值: ' + (data.threshold||50);
+    info.textContent = '候选: ' + (data.total_candidates||'—') + ' · 通过: ' + (data.passed_count||'—') + ' · 阈值: ' + (data.threshold||50);
 
     if (!data.results?.length) {
       results.innerHTML = '<div class="loading-text">没有浮现的记忆</div>';
@@ -1084,7 +1084,7 @@ async function runBreath() {
       <div class="entry-card" style="margin-bottom:0.8rem;cursor:pointer" onclick='openModal(${JSON.stringify(b.id)})'>
         <div class="entry-meta">
           <span class="entry-date">${b.name || b.id?.slice(0,8)}</span>
-          <span class="entry-mood">score ${b.score?.toFixed(2)}</span>
+          <span class="entry-mood">score ${b.normalized?.toFixed(2)}</span>
         </div>
         <div class="entry-content">${(b.content||b.content_preview||'').slice(0,150)}…</div>
       </div>
