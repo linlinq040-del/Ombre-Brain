@@ -1159,10 +1159,8 @@ function drawNetwork(ctx, W, H, data) {
     ctx.fillStyle=n.type==='permanent'?'#9A7B4F':'#2F4F4F';
     ctx.fill();
     // 只显示pinned节点的名字
-    if (n.type==='permanent'||n.pinned) {
-      ctx.fillStyle='#3A3530'; ctx.font='10px Inter,sans-serif'; ctx.textAlign='center';
-      ctx.fillText((n.name||n.id?.slice(0,6)).slice(0,8), p.x, p.y+18);
-    }
+    ctx.fillStyle='#3A3530'; ctx.font='10px Inter,sans-serif'; ctx.textAlign='center';
+    ctx.fillText((n.name||n.id?.slice(0,6)).slice(0,8), p.x, p.y+r+12);
   });
 }
 
