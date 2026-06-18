@@ -752,21 +752,21 @@ body {
   </div>
 
   <!-- SOUFFLE -->
-  <div id="tab-souffle" class="tab-panel content">
-    <div class="panel-placeholder">
-      <div class="ph-icon">🌬</div>
-      <p>Souffle · Breath 记忆模拟<br>从记忆中浮现最近的感受与碎片</p>
-    </div>
-    <div id="breath-content"></div>
+<div id="tab-souffle" class="tab-panel content">
+  <div style="display:flex;gap:12px;margin-bottom:20px;align-items:center;flex-wrap:wrap;">
+    <input type="text" id="breath-query" placeholder="关键词…" style="padding:10px 14px;border:1px solid var(--border);border-radius:12px;font-family:inherit;font-size:13px;background:var(--surface);color:var(--text);width:200px;" />
+    <input type="number" id="breath-valence" placeholder="Valence 0~1" min="0" max="1" step="0.1" style="padding:10px 14px;border:1px solid var(--border);border-radius:12px;font-family:inherit;font-size:13px;background:var(--surface);color:var(--text);width:130px;" />
+    <input type="number" id="breath-arousal" placeholder="Arousal 0~1" min="0" max="1" step="0.1" style="padding:10px 14px;border:1px solid var(--border);border-radius:12px;font-family:inherit;font-size:13px;background:var(--surface);color:var(--text);width:130px;" />
+    <button onclick="runBreath()" style="padding:10px 24px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-family:inherit;font-size:13px;cursor:pointer;">模拟 Breath</button>
   </div>
+  <div id="breath-info" style="display:none;font-size:12px;color:var(--text-dim);margin-bottom:16px;padding:14px;background:var(--surface);border-radius:12px;border:1px solid var(--border);"></div>
+  <div id="breath-results"><div class="loading-text">输入关键词后点击「模拟 Breath」</div></div>
+</div>
 
   <!-- RÉSEAU -->
-  <div id="tab-réseau" class="tab-panel content">
-    <div class="panel-placeholder">
-      <div class="ph-icon">🕸</div>
-      <p>Réseau · 记忆网络图<br>查看记忆之间的关联</p>
-    </div>
-  </div>
+<div id="tab-réseau" class="tab-panel content">
+  <canvas id="network-canvas" style="width:100%;height:calc(100vh - 180px);background:var(--surface);border-radius:16px;border:1px solid var(--border);"></canvas>
+</div>
 
   <!-- IMPORT -->
   <div id="tab-import" class="tab-panel content">
@@ -860,7 +860,8 @@ function switchTab(name, el) {
   if (panel) panel.classList.add('active');
   if (name === 'étoile') loadEtoile();
   if (name === 'passage') loadPassage();
-  if (name === 'souffle') loadBreath();
+  if (name === 'souffle') runBreath();
+  if (name === 'réseau') loadNetwork();
 }
 
 // ── DATA ──
@@ -1053,29 +1054,90 @@ async function loadPassage() {
 }
 
 // ── BREATH ──
-async function loadBreath() {
-  const el = document.getElementById('breath-content');
-  try {
-    const r = await fetch(BASE + '/api/buckets', {credentials:'include'});
-    if (!r.ok) return;
-    const data = await r.json();
-    const recent = (data.buckets || [])
-      .filter(b => !b.metadata?.archived && !b.metadata?.digested)
-      .sort((a,b) => (b.metadata?.created||'').localeCompare(a.metadata?.created||''))
-      .slice(0,5);
+async function loadBreath() {}
 
-    if (!recent.length) return;
-    el.innerHTML = recent.map(b => {
-      const meta = b.metadata || {};
-      return `<div class="entry-card" style="margin-bottom:0.8rem">
+async function runBreath() {
+  const query = document.getElementById('breath-query').value.trim();
+  const valence = document.getElementById('breath-valence').value;
+  const arousal = document.getElementById('breath-arousal').value;
+  const results = document.getElementById('breath-results');
+  const info = document.getElementById('breath-info');
+  results.innerHTML = '<div class="loading-text">检索中…</div>';
+
+  try {
+    let url = BASE + '/api/breath?';
+    if (query) url += 'query=' + encodeURIComponent(query) + '&';
+    if (valence) url += 'valence=' + valence + '&';
+    if (arousal) url += 'arousal=' + arousal + '&';
+    const r = await fetch(url, {credentials:'include'});
+    if (!r.ok) { results.innerHTML = '<div>Error ' + r.status + '</div>'; return; }
+    const data = await r.json();
+
+    info.style.display = '';
+    info.textContent = '候选: ' + (data.total_candidates||'—') + ' · 通过: ' + (data.passed||'—') + ' · 阈值: ' + (data.threshold||50);
+
+    if (!data.results?.length) {
+      results.innerHTML = '<div class="loading-text">没有浮现的记忆</div>';
+      return;
+    }
+    results.innerHTML = data.results.map(b => `
+      <div class="entry-card" style="margin-bottom:0.8rem;cursor:pointer" onclick='openModal(${JSON.stringify(b.id)})'>
         <div class="entry-meta">
-          <span class="entry-date">${meta.name || b.id.slice(0,8)}</span>
-          ${meta.importance ? `<span class="entry-mood">重要度 ${meta.importance}</span>` : ''}
+          <span class="entry-date">${b.name || b.id?.slice(0,8)}</span>
+          <span class="entry-mood">score ${b.score?.toFixed(2)}</span>
         </div>
-        <div class="entry-content">${(b.content||'').slice(0,200)}${b.content?.length > 200 ? '…' : ''}</div>
-      </div>`;
-    }).join('');
-  } catch {}
+        <div class="entry-content">${(b.content||b.content_preview||'').slice(0,150)}…</div>
+      </div>
+    `).join('');
+  } catch(e) { results.innerHTML = '<div>' + e.message + '</div>'; }
+}
+
+async function loadNetwork() {
+  const canvas = document.getElementById('network-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * devicePixelRatio;
+  canvas.height = canvas.offsetHeight * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+  ctx.fillStyle = '#F7F5EE';
+  ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = '#8A8070';
+  ctx.font = '14px Inter,sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('加载记忆网络…', W/2, H/2);
+  try {
+    const r = await fetch(BASE + '/api/network', {credentials:'include'});
+    const data = await r.json();
+    drawNetwork(ctx, W, H, data);
+  } catch(e) { ctx.fillText('加载失败: ' + e.message, W/2, H/2+24); }
+}
+
+function drawNetwork(ctx, W, H, data) {
+  const nodes = data.nodes, edges = data.edges;
+  if (!nodes?.length) { ctx.fillStyle='#8A8070'; ctx.fillText('没有记忆桶', W/2, H/2); return; }
+  const pos = {};
+  nodes.forEach((n,i) => {
+    const angle = (i/nodes.length)*Math.PI*2;
+    const r = Math.min(W,H)*0.35;
+    pos[n.id] = { x: W/2+Math.cos(angle)*r, y: H/2+Math.sin(angle)*r };
+  });
+  ctx.fillStyle='#F7F5EE'; ctx.fillRect(0,0,W,H);
+  edges?.forEach(e => {
+    const a=pos[e.source], b=pos[e.target];
+    if(!a||!b) return;
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+    ctx.strokeStyle='rgba(47,79,79,'+(e.similarity*0.3)+')';
+    ctx.lineWidth=1; ctx.stroke();
+  });
+  nodes.forEach(n => {
+    const p=pos[n.id];
+    ctx.beginPath(); ctx.arc(p.x,p.y,6,0,Math.PI*2);
+    ctx.fillStyle=n.type==='permanent'?'#9A7B4F':'#2F4F4F';
+    ctx.fill();
+    ctx.fillStyle='#3A3530'; ctx.font='11px Inter,sans-serif'; ctx.textAlign='center';
+    ctx.fillText(n.name||n.id?.slice(0,6), p.x, p.y+18);
+  });
 }
 
 // ── KEYBOARD ──
