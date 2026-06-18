@@ -624,6 +624,47 @@ body {
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--mint-light); border-radius: 4px; }
+  /* ── MOBILE ── */
+@media (max-width: 768px) {
+  .header { padding: 16px; flex-wrap: wrap; gap: 10px; }
+  .header h1 { font-size: 20px; }
+  .search-bar { width: 100%; }
+  .search-bar input { width: 100%; }
+
+  .tabs { padding: 0 8px; overflow-x: auto; gap: 0; }
+  .tab { padding: 12px 12px; font-size: 11px; white-space: nowrap; }
+  .tab .tab-icon { display: block; font-size: 16px; margin-bottom: 2px; }
+
+  .content { padding: 16px; }
+
+  .bucket-list { gap: 6px; }
+  .bucket-row {
+    grid-template-columns: 28px 1fr auto;
+    gap: 6px;
+    padding: 10px 14px;
+  }
+  .bucket-row .domain,
+  .bucket-row .importance,
+  .bucket-row .date { display: none; }
+  .bucket-row .preview { grid-column: 2 / -1; font-size: 11px; }
+
+  .filters { gap: 6px; }
+  .filter-btn { padding: 6px 12px; font-size: 11px; }
+
+  .modal { width: 95vw; max-height: 85vh; padding: 20px 16px; }
+
+  .accueil-title { font-size: 2.4rem; }
+  .timer-numbers { gap: 12px; }
+  .timer-num { font-size: 2.2rem; }
+  .modules-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 0 8px; }
+  .module-card { padding: 16px 12px; }
+
+  .entry-card { padding: 14px; }
+
+  #network-canvas { height: 60vh; }
+
+  .detail-panel { width: 100%; }
+}
 </style>
 </head>
 <body>
