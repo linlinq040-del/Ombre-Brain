@@ -315,7 +315,7 @@ body {
 
 .bucket-row {
   display: grid;
-  grid-template-columns: 28px 180px 90px 70px 55px 90px 1fr;
+  grid-template-columns: 22px 28px 180px 90px 70px 55px 90px 1fr;
   gap: 12px;
   padding: 12px 18px;
   border-radius: 14px;
@@ -325,6 +325,64 @@ body {
   transition: all 0.2s;
   background: rgba(255,255,255,0.55);
   border: 1px solid transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.drag-handle {
+  cursor: grab;
+  color: var(--text-light);
+  font-size: 14px;
+  text-align: center;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+  touch-action: none;
+}
+
+.drag-handle:active { cursor: grabbing; }
+
+.bucket-row:hover .drag-handle { opacity: 0.8; }
+
+.bucket-row.dragging {
+  opacity: 0.4;
+  transform: scale(0.98);
+  border: 1px dashed var(--sage);
+}
+
+.bucket-row.drag-over {
+  border-color: var(--sage);
+  background: var(--mint-pale);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.sort-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+.sort-controls .sort-hint {
+  font-size: 10px;
+  color: var(--text-light);
+  letter-spacing: 0.05em;
+}
+
+.sort-controls button {
+  font-size: 10px;
+  color: var(--sage);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.sort-controls button:hover {
+  border-color: var(--sage);
+  background: rgba(255,255,255,0.6);
 }
 
 .bucket-row:hover {
@@ -641,14 +699,14 @@ body {
 
   .bucket-list { gap: 6px; }
   .bucket-row {
-    grid-template-columns: 28px 1fr auto;
+    grid-template-columns: 22px 28px 1fr auto;
     gap: 6px;
     padding: 10px 14px;
   }
   .bucket-row .domain,
   .bucket-row .importance,
   .bucket-row .date { display: none; }
-  .bucket-row .preview { grid-column: 2 / -1; font-size: 11px; }
+  .bucket-row .preview { grid-column: 3 / -1; font-size: 11px; }
 
   .filters { gap: 6px; }
   .filter-btn { padding: 6px 12px; font-size: 11px; }
@@ -768,6 +826,10 @@ body {
       <button class="filter-btn" onclick="setFilter('unresolved', this)">⚡ Non résolu</button>
       <button class="filter-btn" onclick="setFilter('digested', this)">🌿 Digéré</button>
       <button class="filter-btn" onclick="setFilter('archive', this)">📦 Archive</button>
+    </div>
+    <div class="sort-controls">
+      <span class="sort-hint">⠿ 长按拖动可自定义排序</span>
+      <button onclick="resetOrder()">重置排序</button>
     </div>
     <div class="bucket-list" id="bucketList">
       <div class="loading-text">Chargement des souvenirs…</div>
@@ -1021,6 +1083,20 @@ function renderBuckets() {
     (b.metadata?.tags||[]).some(t => t.toLowerCase().includes(q))
   );
 
+  // 应用自定义排序
+  const orderKey = 'ombre_sort_' + currentFilter;
+  const savedOrder = JSON.parse(localStorage.getItem(orderKey) || '[]');
+  if (savedOrder.length && !q) {
+    filtered.sort((a, b) => {
+      const ia = savedOrder.indexOf(a.id);
+      const ib = savedOrder.indexOf(b.id);
+      if (ia === -1 && ib === -1) return 0;
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    });
+  }
+
   if (!filtered.length) {
     list.innerHTML = '<div class="loading-text">Aucun souvenir trouvé.</div>';
     return;
@@ -1033,7 +1109,8 @@ function renderBuckets() {
     const preview = (b.content || '').replace(/\n/g,' ').slice(0,80);
     const date = meta.created ? meta.created.slice(0,10) : '';
     const imp = meta.importance || '';
-    return `<div class="bucket-row" onclick='openModal(${JSON.stringify(b.id)})'>
+    return `<div class="bucket-row" data-id="${b.id}" draggable="true" onclick='openModal(${JSON.stringify(b.id)})'>
+      <span class="drag-handle" ontouchstart="onTouchDragStart(event)" ontouchmove="onTouchDragMove(event)" ontouchend="onTouchDragEnd(event)">⠿</span>
       <span class="icon">${icon}</span>
       <span class="name">${(meta.tags?.length ? meta.tags[0] : null) || meta.name || b.name || b.id.slice(0,8)}</span>
       <span class="tags">${tags}</span>
@@ -1043,6 +1120,9 @@ function renderBuckets() {
       <span class="preview">${preview}</span>
     </div>`;
   }).join('');
+
+  // 绑定桌面端拖拽事件
+  initDesktopDrag();
 }
 
 function filterBuckets() { renderBuckets(); }
@@ -1363,6 +1443,148 @@ async function saveConfig(persist) {
     status.textContent = result.ok ? '✓ 已更新' : '✗ ' + (result.error||'失败');
     if (result.ok) loadConfig();
   } catch(e) { status.textContent = '✗ 请求失败'; }
+}
+
+// ── DRAG SORT ──
+let dragSrcRow = null;
+
+function saveCurrentOrder() {
+  const list = document.getElementById('bucketList');
+  const rows = list.querySelectorAll('.bucket-row');
+  const ids = Array.from(rows).map(r => r.dataset.id);
+  const orderKey = 'ombre_sort_' + currentFilter;
+  localStorage.setItem(orderKey, JSON.stringify(ids));
+}
+
+function resetOrder() {
+  const orderKey = 'ombre_sort_' + currentFilter;
+  localStorage.removeItem(orderKey);
+  renderBuckets();
+}
+
+// Desktop drag
+function initDesktopDrag() {
+  const rows = document.querySelectorAll('.bucket-row');
+  rows.forEach(row => {
+    row.addEventListener('dragstart', e => {
+      if (!e.target.closest('.drag-handle') && e.target.className !== 'drag-handle') {
+        e.preventDefault(); return;
+      }
+      dragSrcRow = row;
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', row.dataset.id);
+    });
+    row.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (row !== dragSrcRow) row.classList.add('drag-over');
+    });
+    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      document.querySelectorAll('.drag-over').forEach(r => r.classList.remove('drag-over'));
+    });
+    row.addEventListener('drop', e => {
+      e.preventDefault();
+      row.classList.remove('drag-over');
+      if (dragSrcRow && dragSrcRow !== row) {
+        const list = document.getElementById('bucketList');
+        const allRows = Array.from(list.querySelectorAll('.bucket-row'));
+        const fromIdx = allRows.indexOf(dragSrcRow);
+        const toIdx = allRows.indexOf(row);
+        if (fromIdx < toIdx) row.after(dragSrcRow);
+        else row.before(dragSrcRow);
+        saveCurrentOrder();
+      }
+      dragSrcRow = null;
+    });
+  });
+}
+
+// Touch drag for mobile
+let touchDragEl = null;
+let touchClone = null;
+let touchStartY = 0;
+let touchMoved = false;
+
+function onTouchDragStart(e) {
+  e.stopPropagation();
+  const row = e.target.closest('.bucket-row');
+  if (!row) return;
+  touchDragEl = row;
+  touchStartY = e.touches[0].clientY;
+  touchMoved = false;
+
+  // 创建拖拽克隆
+  setTimeout(() => {
+    if (!touchDragEl) return;
+    touchClone = row.cloneNode(true);
+    touchClone.style.cssText = `
+      position:fixed; z-index:999; pointer-events:none;
+      width:${row.offsetWidth}px; opacity:0.85;
+      box-shadow: 0 8px 24px rgba(42,61,50,0.2);
+      border: 1px solid var(--sage);
+      left:${row.getBoundingClientRect().left}px;
+      top:${e.touches[0].clientY - 20}px;
+      border-radius:14px; background:rgba(255,255,255,0.95);
+    `;
+    document.body.appendChild(touchClone);
+    row.classList.add('dragging');
+  }, 150);
+}
+
+function onTouchDragMove(e) {
+  if (!touchDragEl) return;
+  const dy = Math.abs(e.touches[0].clientY - touchStartY);
+  if (dy > 8) {
+    touchMoved = true;
+    e.preventDefault();
+  }
+  if (!touchClone) return;
+  touchClone.style.top = (e.touches[0].clientY - 20) + 'px';
+
+  // 找到当前位置下的目标行
+  document.querySelectorAll('.drag-over').forEach(r => r.classList.remove('drag-over'));
+  const target = getRowAtPoint(e.touches[0].clientX, e.touches[0].clientY);
+  if (target && target !== touchDragEl) target.classList.add('drag-over');
+}
+
+function onTouchDragEnd(e) {
+  if (!touchDragEl) return;
+  if (touchClone) {
+    document.body.removeChild(touchClone);
+    touchClone = null;
+  }
+  touchDragEl.classList.remove('dragging');
+  document.querySelectorAll('.drag-over').forEach(r => r.classList.remove('drag-over'));
+
+  if (touchMoved) {
+    // 阻止后续click
+    e.preventDefault();
+    const lastTouch = e.changedTouches[0];
+    const target = getRowAtPoint(lastTouch.clientX, lastTouch.clientY);
+    if (target && target !== touchDragEl) {
+      const list = document.getElementById('bucketList');
+      const allRows = Array.from(list.querySelectorAll('.bucket-row'));
+      const fromIdx = allRows.indexOf(touchDragEl);
+      const toIdx = allRows.indexOf(target);
+      if (fromIdx < toIdx) target.after(touchDragEl);
+      else target.before(touchDragEl);
+      saveCurrentOrder();
+    }
+  }
+  touchDragEl = null;
+  touchMoved = false;
+}
+
+function getRowAtPoint(x, y) {
+  const rows = document.querySelectorAll('.bucket-row');
+  for (const row of rows) {
+    const rect = row.getBoundingClientRect();
+    if (y >= rect.top && y <= rect.bottom) return row;
+  }
+  return null;
 }
 
 // ── KEYBOARD ──
