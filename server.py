@@ -703,7 +703,7 @@ async def breath(
     try:
         vector_results = await embedding_engine.search_similar(query, top_k=max(max_results, 20))
         for bucket_id, sim_score in vector_results:
-            if bucket_id not in matched_ids and sim_score > 0.5:
+            if bucket_id not in matched_ids and sim_score > 0.3:
                 bucket = await bucket_mgr.get(bucket_id)
                 if bucket and not (bucket["metadata"].get("pinned") or bucket["metadata"].get("protected")):
                     bucket["score"] = round(sim_score * 100, 2)
