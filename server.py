@@ -703,7 +703,7 @@ async def breath(
     try:
         vector_results = await embedding_engine.search_similar(query, top_k=max(max_results, 20))
         for bucket_id, sim_score in vector_results:
-            if bucket_id not in matched_ids and sim_score > 0.3:
+            if bucket_id not in matched_ids and sim_score > 0.5:
                 bucket = await bucket_mgr.get(bucket_id)
                 if bucket and not (bucket["metadata"].get("pinned") or bucket["metadata"].get("protected")):
                     bucket["score"] = round(sim_score * 100, 2)
@@ -1982,9 +1982,14 @@ if __name__ == "__main__":
             if not embedding_engine.enabled:
                 return
             await asyncio.sleep(5)  # Wait for server to fully start
+            # Create a fresh EmbeddingEngine with its own AsyncOpenAI client bound to
+            # this event loop — reusing the main-thread client across loops causes errors.
+            fresh_engine = EmbeddingEngine(config)
+            if not fresh_engine.enabled:
+                return
             try:
                 all_buckets = await bucket_mgr.list_all(include_archive=True)
-                missing = [b for b in all_buckets if await embedding_engine.get_embedding(b["id"]) is None]
+                missing = [b for b in all_buckets if fresh_engine.get_embedding_sync(b["id"]) is None]
                 if not missing:
                     logger.info(f"Embedding backfill: all {len(all_buckets)} buckets already have embeddings")
                     return
@@ -1995,7 +2000,7 @@ if __name__ == "__main__":
                     if not content:
                         continue
                     try:
-                        ok = await embedding_engine.generate_and_store(b["id"], content)
+                        ok = await fresh_engine.generate_and_store(b["id"], content)
                         if ok:
                             success += 1
                     except Exception as e:
