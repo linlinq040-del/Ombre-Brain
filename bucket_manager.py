@@ -526,7 +526,7 @@ class BucketManager:
                 # not a relevance gate for tag hits).
                 has_exact_tag = any(
                     fuzz.partial_ratio(query, tag) >= 90
-                    for tag in meta.get("tags", [])
+                    for tag in (meta.get("tags") or [])
                 )
                 if normalized >= self.fuzzy_threshold or has_exact_tag:
                     # Resolved buckets get ranking penalty (but still reachable by keyword)
@@ -557,22 +557,23 @@ class BucketManager:
         """
         meta = bucket.get("metadata", {})
 
-        name_score = fuzz.partial_ratio(query, meta.get("name", "")) * 3
+        name_score = fuzz.partial_ratio(query, meta.get("name") or "") * 3
         domain_score = (
             max(
-                (fuzz.partial_ratio(query, d) for d in meta.get("domain", [])),
+                (fuzz.partial_ratio(query, d) for d in (meta.get("domain") or [])),
                 default=0,
             )
             * 2.5
         )
         tag_score = (
             max(
-                (fuzz.partial_ratio(query, tag) for tag in meta.get("tags", [])),
+                (fuzz.partial_ratio(query, tag) for tag in (meta.get("tags") or [])),
                 default=0,
             )
             * 2
         )
-        content_score = fuzz.partial_ratio(query, bucket.get("content", "")[:1000]) * self.content_weight
+        body = (bucket.get("content") or "")[:1000]
+        content_score = (fuzz.partial_ratio(query, body) if body else 0) * self.content_weight
 
         return (name_score + domain_score + tag_score + content_score) / (100 * (3 + 2.5 + 2 + self.content_weight))
 
