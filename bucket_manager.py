@@ -521,10 +521,20 @@ class BucketManager:
                 weight_sum = self.w_topic + self.w_emotion + self.w_time + self.w_importance
                 normalized = (total / weight_sum) * 100 if weight_sum > 0 else 0
 
-                # Threshold check uses raw (pre-penalty) score so resolved buckets
-                # 阈值用原始分数判定，确保 resolved 桶在关键词命中时仍可被搜出
-                # remain reachable by keyword (penalty applied only to ranking).
-                if normalized >= self.fuzzy_threshold:
+                # Exact tag match bypasses time-decay threshold so old-but-relevant
+                # buckets surface on direct keyword hits (time is a ranking signal,
+                # not a relevance gate). Minimum topic_score guard prevents recently-
+                # touched high-importance buckets with accidental character overlap
+                # from flooding keyword results.
+                has_exact_tag = any(
+                    fuzz.partial_ratio(query, tag) >= 90
+                    for tag in meta.get("tags", [])
+                )
+                passes_threshold = (
+                    (normalized >= self.fuzzy_threshold or has_exact_tag)
+                    and topic_score >= 0.12
+                )
+                if passes_threshold:
                     # Resolved buckets get ranking penalty (but still reachable by keyword)
                     # 已解决的桶仅在排序时降权
                     if meta.get("resolved", False):
