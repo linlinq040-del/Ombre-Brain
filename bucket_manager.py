@@ -483,9 +483,9 @@ class BucketManager:
                 if vector_results:
                     vector_ids = {bid for bid, _ in vector_results}
                     emb_candidates = [b for b in candidates if b["id"] in vector_ids]
-                    if emb_candidates:  # only replace if there's non-empty overlap
-                        candidates = emb_candidates
-                    # else: keep original candidates as fallback
+                    # Buckets without embeddings yet still go through fuzzy ranking
+                    no_emb_candidates = [b for b in candidates if b["id"] not in vector_ids]
+                    candidates = emb_candidates + no_emb_candidates
             except Exception as e:
                 logger.warning(f"Embedding pre-filter failed, using fuzzy only / embedding 预筛失败: {e}")
 
