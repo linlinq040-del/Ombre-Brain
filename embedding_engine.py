@@ -125,6 +125,20 @@ class EmbeddingEngine:
         conn.commit()
         conn.close()
 
+    def get_embedding_sync(self, bucket_id: str) -> list[float] | None:
+        """Synchronous version of get_embedding — safe to call from any thread/loop."""
+        conn = sqlite3.connect(self.db_path)
+        row = conn.execute(
+            "SELECT embedding FROM embeddings WHERE bucket_id = ?", (bucket_id,)
+        ).fetchone()
+        conn.close()
+        if row:
+            try:
+                return json.loads(row[0])
+            except (json.JSONDecodeError, Exception):
+                return None
+        return None
+
     async def get_embedding(self, bucket_id: str) -> list[float] | None:
         """Retrieve stored embedding for a bucket. Returns None if not found."""
         conn = sqlite3.connect(self.db_path)
