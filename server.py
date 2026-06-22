@@ -1977,6 +1977,41 @@ if __name__ == "__main__":
         import uvicorn
         from starlette.middleware.cors import CORSMiddleware
     
+        # --- Startup backfill: generate embeddings for buckets that don't have one yet ---
+        async def _backfill_embeddings():
+            if not embedding_engine.enabled:
+                return
+            await asyncio.sleep(5)  # Wait for server to fully start
+            try:
+                all_buckets = await bucket_mgr.list_all(include_archive=True)
+                missing = [b for b in all_buckets if await embedding_engine.get_embedding(b["id"]) is None]
+                if not missing:
+                    logger.info(f"Embedding backfill: all {len(all_buckets)} buckets already have embeddings")
+                    return
+                logger.info(f"Embedding backfill: {len(missing)}/{len(all_buckets)} buckets need embeddings")
+                success = 0
+                for b in missing:
+                    content = b.get("content", "").strip()
+                    if not content:
+                        continue
+                    try:
+                        ok = await embedding_engine.generate_and_store(b["id"], content)
+                        if ok:
+                            success += 1
+                    except Exception as e:
+                        logger.warning(f"Backfill failed for {b['id'][:12]}: {e}")
+                    await asyncio.sleep(0.1)
+                logger.info(f"Embedding backfill done: {success}/{len(missing)} succeeded")
+            except Exception as e:
+                logger.warning(f"Embedding backfill error: {e}")
+
+        def _start_backfill():
+            loop = asyncio.new_event_loop()
+            loop.run_until_complete(_backfill_embeddings())
+
+        tb = threading.Thread(target=_start_backfill, daemon=True)
+        tb.start()
+
         # --- Application-level keepalive: ping /health every 60s ---
         # --- 应用层保活：每 60 秒 ping 一次 /health，防止 Cloudflare Tunnel 空闲断连 ---
         async def _keepalive_loop():
