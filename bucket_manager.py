@@ -557,7 +557,8 @@ class BucketManager:
         """
         meta = bucket.get("metadata", {})
 
-        name_score = fuzz.partial_ratio(query, meta.get("name") or "") * 3
+        best_name = fuzz.partial_ratio(query, meta.get("name") or "")
+        name_score = best_name * 3
         domain_score = (
             max(
                 (fuzz.partial_ratio(query, d) for d in (meta.get("domain") or [])),
@@ -565,17 +566,21 @@ class BucketManager:
             )
             * 2.5
         )
-        tag_score = (
-            max(
-                (fuzz.partial_ratio(query, tag) for tag in (meta.get("tags") or [])),
-                default=0,
-            )
-            * 2
+        best_tag = max(
+            (fuzz.partial_ratio(query, tag) for tag in (meta.get("tags") or [])),
+            default=0,
         )
+        tag_score = best_tag * 2
         body = (bucket.get("content") or "")[:1000]
         content_score = (fuzz.partial_ratio(query, body) if body else 0) * self.content_weight
 
-        return (name_score + domain_score + tag_score + content_score) / (100 * (3 + 2.5 + 2 + self.content_weight))
+        raw = (name_score + domain_score + tag_score + content_score) / (100 * (3 + 2.5 + 2 + self.content_weight))
+
+        # Exact tag or name match → guarantee high topic relevance so noise doesn't bury it
+        if best_tag >= 90 or best_name >= 90:
+            raw = max(raw, 0.85)
+
+        return raw
 
     # ---------------------------------------------------------
     # Emotion resonance sub-score:
