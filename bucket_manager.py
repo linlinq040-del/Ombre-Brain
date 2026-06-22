@@ -524,9 +524,11 @@ class BucketManager:
                 # Exact tag match bypasses time-decay threshold so old-but-relevant
                 # buckets surface on direct keyword hits (time is a ranking signal,
                 # not a relevance gate for tag hits).
+                _tags = self._normalize_tags(meta)
+                _q = query.lower()
                 has_exact_tag = any(
-                    fuzz.partial_ratio(query, tag) >= 90
-                    for tag in (meta.get("tags") or [])
+                    _q in t.lower() or t.lower() in _q or fuzz.partial_ratio(query, t) >= 90
+                    for t in _tags
                 )
                 if normalized >= self.fuzzy_threshold or has_exact_tag:
                     # Resolved buckets get ranking penalty (but still reachable by keyword)
@@ -546,6 +548,17 @@ class BucketManager:
         return scored[:limit]
 
     # ---------------------------------------------------------
+    # Normalize tags field: handle both list and comma-separated string.
+    # Tags stored by older versions may be a single "a,b,c" string.
+    # ---------------------------------------------------------
+    @staticmethod
+    def _normalize_tags(meta: dict) -> list[str]:
+        tags_raw = meta.get("tags") or []
+        if isinstance(tags_raw, str):
+            return [t.strip() for t in tags_raw.split(",") if t.strip()]
+        return [t for t in tags_raw if isinstance(t, str)]
+
+    # ---------------------------------------------------------
     # Topic relevance sub-score:
     # name(×3) + domain(×2.5) + tags(×2) + body(×1)
     # 文本相关性子分：桶名(×3) + 主题域(×2.5) + 标签(×2) + 正文(×1)
@@ -556,6 +569,7 @@ class BucketManager:
         计算文本维度的相关性得分。
         """
         meta = bucket.get("metadata", {})
+        tags = self._normalize_tags(meta)
 
         best_name = fuzz.partial_ratio(query, meta.get("name") or "")
         name_score = best_name * 3
@@ -567,7 +581,7 @@ class BucketManager:
             * 2.5
         )
         best_tag = max(
-            (fuzz.partial_ratio(query, tag) for tag in (meta.get("tags") or [])),
+            (fuzz.partial_ratio(query, tag) for tag in tags),
             default=0,
         )
         tag_score = best_tag * 2
@@ -576,8 +590,14 @@ class BucketManager:
 
         raw = (name_score + domain_score + tag_score + content_score) / (100 * (3 + 2.5 + 2 + self.content_weight))
 
-        # Exact tag or name match → guarantee high topic relevance so noise doesn't bury it
-        if best_tag >= 90 or best_name >= 90:
+        # Substring containment or high fuzzy match → guarantee high topic relevance
+        query_lower = query.lower()
+        substring_match = (
+            any(query_lower in t.lower() or t.lower() in query_lower for t in tags)
+            or query_lower in (meta.get("name") or "").lower()
+            or (meta.get("name") or "").lower() in query_lower
+        )
+        if substring_match or best_tag >= 90 or best_name >= 90:
             raw = max(raw, 0.85)
 
         return raw
