@@ -523,18 +523,12 @@ class BucketManager:
 
                 # Exact tag match bypasses time-decay threshold so old-but-relevant
                 # buckets surface on direct keyword hits (time is a ranking signal,
-                # not a relevance gate). Minimum topic_score guard prevents recently-
-                # touched high-importance buckets with accidental character overlap
-                # from flooding keyword results.
+                # not a relevance gate for tag hits).
                 has_exact_tag = any(
                     fuzz.partial_ratio(query, tag) >= 90
                     for tag in meta.get("tags", [])
                 )
-                passes_threshold = (
-                    (normalized >= self.fuzzy_threshold or has_exact_tag)
-                    and topic_score >= 0.12
-                )
-                if passes_threshold:
+                if normalized >= self.fuzzy_threshold or has_exact_tag:
                     # Resolved buckets get ranking penalty (but still reachable by keyword)
                     # 已解决的桶仅在排序时降权
                     if meta.get("resolved", False):
