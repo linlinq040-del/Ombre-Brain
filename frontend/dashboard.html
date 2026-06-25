@@ -2279,6 +2279,18 @@
         <button onclick="loadSettingsStatus()" title="刷新" style="margin-top:8px;font-size:12px;padding:0 12px;height:32px;display:inline-flex;align-items:center;gap:5px;"><i data-lucide="refresh-cw"></i> 刷新</button>
       </div>
 
+      <div style="margin-bottom:18px;">
+        <div style="font-weight:600;font-size:13px;margin-bottom:6px;">修复钉选计数</div>
+        <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;line-height:1.6;">
+          若「永久桶计数」明显大于面板里实际的钉选数（取消钉选后计数不减、钉新桶老报上限），
+          点这里清理残留的孤儿固化桶：把它们降级回动态桶，释放配额、解开权重卡死。安全幂等，可重复点。
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button onclick="fixPinnedDesync()" title="检查并修复" style="font-size:12px;padding:0 12px;height:32px;display:inline-flex;align-items:center;gap:5px;"><i data-lucide="wrench"></i> 检查并修复</button>
+          <span id="fix-pinned-msg" style="font-size:12px;"></span>
+        </div>
+      </div>
+
       <div>
         <div style="font-weight:600;font-size:13px;margin-bottom:6px;">宿主机记忆桶目录 (Docker)</div>
         <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;line-height:1.6;">
@@ -3285,6 +3297,39 @@ async function loadSettingsStatus() {
     el.textContent = '加载失败: ' + e;
   }
   await loadTunnelStatus();
+}
+
+// 修复钉选计数：先 GET 预演拿孤儿数 → 确认 → POST 实际降级。
+async function fixPinnedDesync() {
+  const msgEl = document.getElementById('fix-pinned-msg');
+  if (!msgEl) return;
+  msgEl.style.color = 'var(--text-dim)'; msgEl.textContent = '检查中…';
+  try {
+    const presp = await authFetch('/api/maintenance/fix-pinned-desync');
+    if (!presp) return;
+    const pd = await readJsonSafe(presp);
+    if (!pd.ok) { msgEl.style.color = 'var(--negative)'; msgEl.innerHTML = _SV.err + ' ' + esc(pd.error || '检查失败'); return; }
+    const n = (pd.orphans || []).length;
+    if (n === 0) {
+      msgEl.style.color = 'var(--positive, #9DC880)';
+      msgEl.innerHTML = _SV.ok + ` 计数已对齐，当前钉选 ${pd.pinned} 个，无需修复`;
+      return;
+    }
+    if (!confirm(`发现 ${n} 个孤儿固化桶（已取消钉选却没降级）。\n将把它们降级回动态桶（释放配额、解开权重卡死），不会删除内容。是否继续？`)) {
+      msgEl.style.color = 'var(--text-dim)'; msgEl.textContent = '已取消';
+      return;
+    }
+    msgEl.textContent = '修复中…';
+    const aresp = await authFetch('/api/maintenance/fix-pinned-desync', { method: 'POST' });
+    if (!aresp) return;
+    const ad = await readJsonSafe(aresp);
+    if (!ad.ok) { msgEl.style.color = 'var(--negative)'; msgEl.innerHTML = _SV.err + ' ' + esc(ad.error || '修复失败'); return; }
+    msgEl.style.color = 'var(--positive, #9DC880)';
+    msgEl.innerHTML = _SV.ok + ` 已降级 ${ad.demoted} 个` + (ad.failed ? `，失败 ${ad.failed} 个` : '') + `，现在钉选 ${ad.pinned} 个`;
+    await loadSettingsStatus();
+  } catch (e) {
+    msgEl.style.color = 'var(--negative)'; msgEl.innerHTML = _SV.err + ' ' + esc(e.message || String(e));
+  }
 }
 
 // #6: 环境变量面板
