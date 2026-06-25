@@ -5930,14 +5930,9 @@ loadVersionBadge();
     var logBox  = document.getElementById('ver-log-box');
     var doneEl  = document.getElementById('ver-update-done');
 
-    // 非 Docker 部署没有 restart 策略：更新后进程会退出但不会自动拉起，需要手动重启。
-    var _di = await loadDeployInfo();
-    var _confirmMsg = '确认开始热更新？\n\n请确保已导出记忆备份，更新期间服务会短暂重启（约 10-30 秒）。';
-    if (_di && _di.is_docker === false) {
-      _confirmMsg = '确认开始热更新？\n\n⚠️ 检测到你不是 Docker 部署：更新完成后服务会自动退出，'
-        + '但只有在你用了进程守护（systemd / pm2 / screen 等）时才会自动重启；'
-        + '否则需要你手动重启服务。\n\n请先导出记忆备份再继续。';
-    }
+    // v2.3.9 起：服务端热更新后会「自我重启」(os.execv 原地替换进程)，
+    // 不再依赖外部守护进程，Docker / Render / Zeabur / 裸机 Mac·Linux·Windows 统一自动恢复。
+    var _confirmMsg = '确认开始热更新？\n\n请确保已导出记忆备份，更新期间服务会自动重启（约 10-30 秒）后自行恢复。';
     if (!confirm(_confirmMsg)) return;
 
     if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader"></i> 更新中…'; lucide.createIcons(); }

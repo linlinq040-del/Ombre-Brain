@@ -658,6 +658,19 @@ class BucketManager:
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(frontmatter.dumps(post))
             self._move_bucket(file_path, self.permanent_dir, domain)
+        # --- Reverse: unpin → demote permanent back to dynamic/ ---
+        # --- 取消钉选 → 把固化桶降级回 dynamic/ ---
+        # BUG FIX: 之前 trace(pinned=0) 只翻 pinned 标记，桶却留在 permanent/ 且
+        # type 仍是 "permanent"。后果是 calculate_score 仍走 type=="permanent" 分支
+        # 恒返 999（权重卡死），count_pinned 仍把它算进固化配额（计数卡死、配额被
+        # 占用、钉不了新桶）。取消钉选必须对称地降级：type→dynamic、移回 dynamic/，
+        # 让它重新参与衰减、按 importance 算出正常权重。importance 保持原值（钉选时
+        # 锁过的 10 不主动回退；她/他需要的话用 trace(importance=...) 再降）。
+        elif "pinned" in kwargs and not kwargs.get("pinned") and post.get("type") == "permanent":
+            post["type"] = "dynamic"
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(frontmatter.dumps(post))
+            self._move_bucket(file_path, self.dynamic_dir, domain)
 
         logger.info(f"Updated bucket / 更新记忆桶: {bucket_id}")
 

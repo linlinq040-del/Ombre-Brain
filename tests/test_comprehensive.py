@@ -274,6 +274,29 @@ class TestBucketManagerCreate:
         assert result["metadata"]["importance"] == 10
 
     @pytest.mark.asyncio
+    async def test_unpin_demotes_permanent_to_dynamic(self, bucket_mgr, decay_eng):
+        # 钉选 → update(pinned=True) 自动把桶搬进 permanent/，权重恒 999
+        bid = await bucket_mgr.create(content="一条核心准则")
+        await bucket_mgr.update(bid, pinned=True)
+        pinned = await bucket_mgr.get(bid)
+        assert pinned["metadata"]["type"] == "permanent"
+        assert decay_eng.calculate_score(pinned["metadata"]) == 999.0
+
+        # 取消钉选 → 必须降级回 dynamic，权重不再卡 999
+        ok = await bucket_mgr.update(bid, pinned=False)
+        assert ok
+        unpinned = await bucket_mgr.get(bid)
+        assert unpinned["metadata"].get("pinned") is False
+        assert unpinned["metadata"]["type"] == "dynamic"
+        assert decay_eng.calculate_score(unpinned["metadata"]) != 999.0
+
+        # 固化配额应实时释放（不再被这条占用）
+        from tools._common import count_pinned
+        import tools._runtime as rt
+        rt.bucket_mgr = bucket_mgr
+        assert await count_pinned() == 0
+
+    @pytest.mark.asyncio
     async def test_importance_clamped_below_1(self, bucket_mgr):
         bid = await bucket_mgr.create(content="x", importance=-5)
         result = await bucket_mgr.get(bid)
